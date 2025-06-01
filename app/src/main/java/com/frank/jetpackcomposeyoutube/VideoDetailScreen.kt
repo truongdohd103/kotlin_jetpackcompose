@@ -1,7 +1,9 @@
 package com.frank.jetpackcomposeyoutube
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,15 +41,25 @@ fun VideoDetailScreen(modifier: Modifier = Modifier, openCategoryScreen: () -> U
     val listVideos = fetchVideoData()
     val scrollState = rememberLazyListState()
 
-    // Theo dõi hướng cuộn để xác định hiển thị VideoAction
-    val isScrollingUp by remember {
+    // Theo dõi trạng thái cuộn
+    val shouldShowVideoAction by remember {
         derivedStateOf {
-            scrollState.firstVisibleItemIndex == 0 && scrollState.firstVisibleItemScrollOffset == 0
+            val index = scrollState.firstVisibleItemIndex
+            val offset = scrollState.firstVisibleItemScrollOffset
+            // Lấy chiều cao của item đầu tiên (VideoDetail) từ layoutInfo
+            val visibleItems = scrollState.layoutInfo.visibleItemsInfo
+            val firstItemHeight = visibleItems.firstOrNull()?.size?.toFloat() ?: 200f
+
+            // Hiển thị VideoAction nếu ở đầu danh sách và chưa cuộn quá nửa chiều cao item đầu tiên
+            index == 0 && offset < firstItemHeight / 2
         }
     }
 
-    // Hiệu ứng mờ dần cho VideoAction
-    val videoActionAlpha by animateFloatAsState(if (isScrollingUp || scrollState.firstVisibleItemIndex == 0) 1f else 0f)
+    // Hiệu ứng mờ dần cho VideoAction với animation mượt mà
+    val videoActionAlpha by animateFloatAsState(
+        targetValue = if (shouldShowVideoAction) 1f else 0f,
+        animationSpec = tween(durationMillis = 300, easing = LinearEasing) // Thêm hiệu ứng mượt mà
+    )
 
     Column(modifier = modifier) {
         // Phần cố định: VideoDetail
@@ -58,11 +70,12 @@ fun VideoDetailScreen(modifier: Modifier = Modifier, openCategoryScreen: () -> U
             timeAgo = "1 day ago"
         )
 
-        // VideoAction với hiệu ứng mờ dần
+        // VideoAction với hiệu ứng mờ dần và chiều cao động
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .alpha(videoActionAlpha)
+                .height(if (shouldShowVideoAction) 48.dp else 0.dp) // Ẩn hoàn toàn không gian khi không hiển thị
         ) {
             VideoAction(
                 modifier = Modifier.background(Color.White)
